@@ -20,9 +20,6 @@ jobs:
           - name: Windows x86_64
             os: windows-latest
             artifact: sonus-windows-x86_64.zip
-          - name: macOS x86_64
-            os: macos-13
-            artifact: sonus-macos-x86_64.tar.gz
           - name: macOS arm64
             os: macos-latest
             artifact: sonus-macos-arm64.tar.gz
@@ -82,7 +79,9 @@ jobs:
           $version = (Select-String -Path Cargo.toml '^version\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" packaging/windows/sonus.iss /DMyAppVersion=$version
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item packaging/windows/dist/*.exe dist/
+          # The .iss writes to OutputDir=..\dist relative to its own folder,
+          # so the installer lands in packaging/dist.
+          Copy-Item packaging/dist/*.exe dist/
 
       - name: Zip Windows binary
         if: runner.os == 'Windows'

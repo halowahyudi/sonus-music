@@ -10,8 +10,11 @@ name: Publish AUR
 #   AUR_EMAIL            commit author email
 
 on:
-  push:
-    tags: ['v*']
+  # Disabled until the AUR secrets exist — otherwise every tag fails here.
+  # To enable: add AUR_SSH_PRIVATE_KEY / AUR_USERNAME / AUR_EMAIL in
+  # Settings -> Secrets and variables -> Actions, then swap the line below
+  # back to:  push: { tags: ['v*'] }
+  workflow_dispatch:
 
 jobs:
   publish:
