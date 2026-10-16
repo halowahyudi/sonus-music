@@ -64,17 +64,36 @@ pub async fn search(query: &str, limit: usize) -> Result<Vec<SearchResult>, Sear
         url_encode_query(query)
     );
 
+    // The Music listing leads with albums (MPREb_*), channels and playlists
+    // before the actual songs, and those get filtered out during parsing.
+    // Asking for exactly `limit` would therefore come back short — or empty,
+    // since the first few rows are usually albums.
+    let fetch = fetch_count(limit);
+
     let stdout = run_ytdlp(&[
         "--flat-playlist",
         "--print",
         "%(id)s\t%(title)s\t%(duration)s",
         "--playlist-end",
-        &limit.to_string(),
+        &fetch.to_string(),
         &url,
     ])
     .await?;
 
-    parse_search_output(&stdout)
+    let mut results = parse_search_output(&stdout)?;
+    results.truncate(limit);
+    Ok(results)
+}
+
+/// How many rows to ask yt-dlp for, given how many we actually want.
+///
+/// Over-fetching is necessary because the listing is padded with albums and
+/// channels that get filtered out. Three times the request covers the usual
+/// mix; the flat listing is cheap, so the extra rows cost little.
+fn fetch_count(limit: usize) -> usize {
+    // saturating_add, not `+`: a caller passing usize::MAX would otherwise
+    // panic in debug builds.
+    limit.saturating_mul(3).max(limit.saturating_add(10))
 }
 
 /// Run yt-dlp with the given args and return stdout.
@@ -339,6 +358,36 @@ mod tests {
         let results = parse_search_output(stdout).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].youtube_id, "dQw4w9WgXcQ");
+    }
+
+    #[test]
+    fn parse_survives_a_leading_run_of_albums() {
+        // This is the real shape YouTube Music returns: albums first, songs
+        // after. Filtering must leave the songs intact.
+        let stdout = "MPREb_ALeXezIU8OA\tNA\tNA\n\
+                      MPREb_GvPMXBmBE6G\tNA\tNA\n\
+                      MPREb_r1Y8zSeXWqh\tNA\tNA\n\
+                      rHbz7toyD1U\tBreak Apart (feat. Rhye)\t275\n\
+                      bI_90Z942ZI\tEmkay\t326";
+        let results = parse_search_output(stdout).unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].youtube_id, "rHbz7toyD1U");
+    }
+
+    #[test]
+    fn fetch_count_asks_for_more_than_requested() {
+        // Albums and channels eat into the listing, so we always ask for a
+        // cushion — otherwise a small limit comes back empty.
+        assert!(fetch_count(10) > 10);
+        assert!(fetch_count(1) > 1);
+        assert_eq!(fetch_count(30), 90);
+        // A tiny limit still gets a sane floor.
+        assert_eq!(fetch_count(0), 10);
+    }
+
+    #[test]
+    fn fetch_count_does_not_overflow() {
+        assert_eq!(fetch_count(usize::MAX), usize::MAX);
     }
 
     #[test]
