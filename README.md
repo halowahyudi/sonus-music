@@ -18,44 +18,61 @@ yt-dlp, with a retro pixel-art desktop GUI. No ads, no accounts, no cost.
 
 ## Install
 
-Pick whichever matches your platform:
-
-### Arch Linux (AUR)
-
-```bash
-yay -S sonus        # or: paru -S sonus
-```
-
-Packages are published from the `packaging/aur/` directory. yt-dlp and ffmpeg
-are *optional* dependencies — Sonus downloads its own copies on first launch,
-or you can install them yourself (`sudo pacman -S yt-dlp ffmpeg`).
+Every release publishes prebuilt packages to
+[GitHub Releases](https://github.com/halowahyudi/sonus-music/releases).
 
 ### Windows
 
-1. Download **sonus-setup.exe** from the latest
-   [GitHub Releases](https://github.com/halowahyudi/sonus-music/releases)
-2. Run it — no admin rights needed, no command line
-3. On first launch Sonus offers to download yt-dlp and ffmpeg for you
+1. Download **sonus-<version>-setup.exe** and run it — no admin rights, no
+   command line
+2. On first launch Sonus offers to download yt-dlp and ffmpeg for you
 
-A portable `sonus-windows-x86_64.zip` is also published — unzip and run
-`sonus.exe` from any folder.
+Prefer no installer? Grab **sonus-windows-x86_64.zip** and run `sonus.exe`
+from any folder.
+
+### Debian / Ubuntu
+
+```bash
+sudo apt install ./sonus_<version>-1_amd64.deb
+```
+
+### Fedora / openSUSE
+
+```bash
+sudo dnf install ./sonus-<version>-1.x86_64.rpm
+```
+
+### Arch Linux
+
+The AUR package is prepared (`packaging/aur/PKGBUILD`) but not published yet —
+new AUR account registration is currently closed. Until it's live, build from
+source:
+
+```bash
+git clone https://github.com/halowahyudi/sonus-music
+cd sonus-music
+cargo build --release --locked
+install -Dm755 target/release/sonus ~/.local/bin/sonus
+```
 
 ### macOS
 
-Download **Sonus.app** (`.tar.gz`) from GitHub Releases, drag it into
-`/Applications`, and right-click → Open the first time (unsigned app).
+Download **sonus-macos-arm64.tar.gz**, unpack `Sonus.app`, and drag it into
+`/Applications`. It's unsigned, so the first launch needs right-click → Open.
 
-### Anywhere else / from source
+### Any binary tarball
+
+The Linux and macOS archives contain a single `sonus` binary:
+
+```bash
+tar -xzf sonus-linux-x86_64.tar.gz
+install -Dm755 sonus ~/.local/bin/sonus
+```
+
+### From source
 
 ```bash
 cargo install --path crates/sonus --locked
-```
-
-or build a release binary:
-
-```bash
-cargo build --release
-./target/release/sonus
 ```
 
 ## Requirements
@@ -63,15 +80,8 @@ cargo build --release
 Sonus streams audio through two external tools: **yt-dlp** (resolves and
 fetches the stream) and **ffmpeg** (decodes to raw PCM).
 
-They're found in this order:
-
-1. `SONUS_YTDLP_PATH` / `SONUS_FFMPEG_PATH` env overrides
-2. A copy Sonus downloaded itself (`sonus deps install`)
-3. Anything already on `PATH`
-
-On first launch the GUI offers to download and install both tools into your
-user data dir — no admin rights, no package manager needed. You can also
-install them yourself:
+You do **not** have to install them — the GUI offers to download both into
+your user data directory on first launch. If you prefer your package manager:
 
 ```bash
 # Arch
@@ -90,6 +100,12 @@ brew install yt-dlp ffmpeg
 winget install yt-dlp.yt-dlp
 winget install Gyan.FFmpeg
 ```
+
+They're found in this order:
+
+1. `SONUS_YTDLP_PATH` / `SONUS_FFMPEG_PATH` env overrides
+2. A copy Sonus downloaded itself (`sonus deps install`)
+3. Anything already on `PATH`
 
 If a system copy is already installed, Sonus prefers it. To manage its own
 downloaded copies instead:
