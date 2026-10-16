@@ -1,4 +1,5 @@
 pub mod enrich;
+pub mod innertube;
 pub mod metadata;
 pub mod radio;
 pub mod search;

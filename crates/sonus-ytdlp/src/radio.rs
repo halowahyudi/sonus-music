@@ -7,10 +7,11 @@ pub const DEFAULT_RADIO_BATCH: usize = 15;
 
 /// Tracks similar to a seed track, pulled from YouTube's recommendation radio.
 ///
-/// YouTube exposes a per-video "radio" mix at `list=RDAMVM<video_id>`. yt-dlp
-/// resolves it to an ordered list of related tracks — the same list YouTube
-/// Music would autoplay after the seed. We ask for it as a flat playlist, so
-/// it costs one subprocess call rather than N metadata fetches.
+/// YouTube exposes a per-video "radio" mix at `list=RDAMVM<video_id>`. The
+/// Innertube path reuses the page data the Music web UI boots from — one GET,
+/// with artist/duration/thumbnail attached, so no enrichment round-trip. When
+/// that path breaks (YouTube shuffling the loader), we fall back to asking
+/// yt-dlp for the same list as a flat playlist.
 ///
 /// The seed itself is always the first entry; it's dropped here because the
 /// caller already has that track queued.
@@ -22,6 +23,18 @@ pub async fn radio_for(
         return Err(SearchError::Parse(format!(
             "not a YouTube video id: {youtube_id}"
         )));
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| SearchError::Parse(format!("http client: {e}")))?;
+
+    match crate::innertube::radio_tracks(&client, youtube_id, limit).await {
+        Ok(tracks) if !tracks.is_empty() => return Ok(tracks),
+        // Fall through to the subprocess path on an empty or failed result.
+        Ok(_) => {}
+        Err(_) => {}
     }
 
     let url = format!("https://music.youtube.com/watch?v={youtube_id}&list=RDAMVM{youtube_id}");
@@ -53,10 +66,11 @@ pub async fn radio_for(
 /// what the user explicitly chose, we top the queue up from the radio rather
 /// than stopping.
 ///
-/// The radio listing is fetched flat (fast, ~2s) and then enriched in the same
-/// batch, because flat results carry no artist names — and a queue full of
-/// "Unknown Artist" rows looks broken. The enrichment runs while music is
-/// already playing, so the extra call is invisible to the user.
+/// The Innertube radio listing arrives with artist/duration/thumbnail already
+/// attached, so enrichment is skipped when every row has them. Fallback rows
+/// from yt-dlp are flat (fast, ~2s) and then enriched in the same batch,
+/// because a queue full of "Unknown Artist" rows looks broken. The enrichment
+/// runs while music is already playing, so the extra call is invisible.
 pub async fn extend_queue(
     seed: &sonus_core::Track,
     already_queued: &[String],
@@ -69,6 +83,13 @@ pub async fn extend_queue(
         .collect();
 
     if fresh.is_empty() {
+        return Ok(fresh);
+    }
+
+    // Innertube rows are already complete; only the flat fallback needs
+    // enriching.
+    let needs_enrichment = fresh.iter().any(|t| t.artist.is_none());
+    if !needs_enrichment {
         return Ok(fresh);
     }
 
