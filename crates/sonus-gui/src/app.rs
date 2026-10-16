@@ -899,6 +899,15 @@ impl SonusApp {
         let added = match result {
             Ok(tracks) => self.player.queue.extend_autoplay(tracks),
             Err(e) => {
+                // The network refused us — the library can still keep the
+                // music going with what the user has actually listened to.
+                if self.extend_local_recommendations() {
+                    self.player.awaiting_radio = false;
+                    if self.player.queue.advance().is_some() {
+                        self.start_current();
+                    }
+                    return;
+                }
                 // Radio is an enhancement — failing it shouldn't interrupt
                 // playback. Drop the wait so we don't sit here forever.
                 self.player.awaiting_radio = false;
@@ -917,6 +926,14 @@ impl SonusApp {
             self.player.awaiting_radio = false;
 
             if added == 0 {
+                // The network radio had nothing new. Try the local library
+                // before giving up — it's free and always available.
+                if self.extend_local_recommendations() {
+                    if self.player.queue.advance().is_some() {
+                        self.start_current();
+                    }
+                    return;
+                }
                 // Nothing new this round. Don't keep hammering the same seed —
                 // the user can ask again, or add something to the queue.
                 self.notify(Notice::info("No more recommendations for this queue"));
@@ -926,6 +943,39 @@ impl SonusApp {
             if self.player.queue.advance().is_some() {
                 self.start_current();
             }
+        }
+    }
+
+    /// Top the queue up from the user's own play history.
+    ///
+    /// The local radio is the offline fallback: it replays the same artist's
+    /// tracks, then the most-played songs, then old favourites nobody has heard
+    /// in a while. Returns true when something was actually added.
+    fn extend_local_recommendations(&mut self) -> bool {
+        let Some(db) = self.db.as_ref() else {
+            return false;
+        };
+        let Some(seed) = self.player.queue.current().cloned() else {
+            return false;
+        };
+
+        let queued: Vec<String> = self
+            .player
+            .queue
+            .items()
+            .iter()
+            .map(|item| item.track.youtube_id.clone())
+            .collect();
+
+        match sonus_library::Recommendations::similar(db, &seed, &queued, 5) {
+            Ok(tracks) if !tracks.is_empty() => {
+                let added = self.player.queue.extend_autoplay(tracks);
+                if added > 0 {
+                    self.notify(Notice::info("Playing from your library"));
+                }
+                added > 0
+            }
+            _ => false,
         }
     }
 

@@ -17,7 +17,10 @@ fn text_of(value: &Value) -> Option<String> {
             .collect();
         return if text.is_empty() { None } else { Some(text) };
     }
-    value.get("simpleText").and_then(|t| t.as_str()).map(String::from)
+    value
+        .get("simpleText")
+        .and_then(|t| t.as_str())
+        .map(String::from)
 }
 
 fn track_from_renderer(renderer: &Value) -> Option<sonus_core::Track> {
@@ -107,8 +110,7 @@ pub async fn radio_tracks(
         .text()
         .await?;
 
-    let json = extract_initial_data(&body)
-        .ok_or_else(|| InnertubeError::NoData(url))?;
+    let json = extract_initial_data(&body).ok_or_else(|| InnertubeError::NoData(url))?;
 
     let mut scan = Scan::default();
     scan_value(&json, &mut scan);
