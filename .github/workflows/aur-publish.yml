@@ -1,0 +1,33 @@
+name: Publish AUR
+
+# Every release tag publishes/updates the AUR package automatically.
+# No manual steps — just push a v* tag and the PKGBUILD in
+# packaging/aur/ lands on aur.archlinux.org.
+#
+# Required repository secrets (Settings -> Secrets and variables):
+#   AUR_SSH_PRIVATE_KEY  private SSH key registered at aur.archlinux.org
+#   AUR_USERNAME         commit author name (e.g. "Winter Cold")
+#   AUR_EMAIL            commit author email
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish to the AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v4.2.0
+        with:
+          pkgname: sonus
+          # packaging/aur mirrors the AUR repo exactly: PKGBUILD (and any
+          # future files) are synced there, and removals propagate too.
+          asset_dir: packaging/aur
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: Update to ${{ github.ref_name }}
+          ssh_keyscan_types: rsa,ecdsa,ed25519

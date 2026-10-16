@@ -319,10 +319,14 @@ mod tests {
 
     #[test]
     fn picks_ffmpeg_asset_for_current_platform() {
+        // Cover every asset the resolver knows about so the test holds no
+        // matter which runner architecture CI lands on.
         let json = release_json(&[
             ("ffmpeg-linux-x64.gz", "aa", 1),
+            ("ffmpeg-linux-arm64.gz", "aa", 1),
             ("ffmpeg-win32-x64.gz", "bb", 1),
             ("ffmpeg-darwin-x64.gz", "cc", 1),
+            ("ffmpeg-darwin-arm64.gz", "cc", 1),
         ]);
         let asset = ffmpeg_asset(&json).unwrap();
         assert!(
