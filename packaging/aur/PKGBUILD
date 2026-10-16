@@ -1,4 +1,4 @@
-# Maintainer: Winter Cold <hi@wahyudi.dev>
+# Maintainer: Winter Cold <hi at wahyudi dot dev>
 # AUR package for Sonus.
 #
 # yt-dlp and ffmpeg are deliberately NOT hard dependencies here: Sonus can
@@ -15,7 +15,9 @@ pkgdesc="Free, local-first music player powered by yt-dlp"
 arch=('x86_64')
 url="https://github.com/halowahyudi/sonus-music"
 license=('MIT')
-depends=('glibc' 'gcc-libs')
+# ldd on the release binary needs alsa-lib (rodio's cpal backend) and glibc;
+# winit dlopens the Wayland/xkbcommon libs at runtime.
+depends=('glibc' 'gcc-libs' 'alsa-lib' 'libxkbcommon' 'wayland')
 makedepends=('rust' 'cargo')
 optdepends=(
     'yt-dlp: recommended, else Sonus downloads its own'
@@ -26,7 +28,9 @@ sha256sums=('SKIP')
 
 build() {
     cd "$srcdir/sonus-$pkgver"
-    cargo build --release --locked --frozen
+    # --locked keeps the committed Cargo.lock; no --frozen, the build chroot
+    # has an empty cargo registry and needs to fetch the crates.
+    cargo build --release --locked
 }
 
 package() {
