@@ -571,10 +571,15 @@ mod tests {
     use super::*;
     use std::io::Cursor;
 
-    /// A live engine, or `None` when this machine has no audio device — CI
-    /// runners usually have none, and a missing sound card shouldn't fail a
-    /// logic test. Tests that need the device return early on `None`.
+    /// A live engine, or `None` when this machine has no usable audio
+    /// device — CI runners usually have none (and rodio's Windows backend
+    /// can crash while opening the null device with many parallel tests),
+    /// so device tests only run on developer machines. Pure logic tests
+    /// (ring buffer, gate, seeking) don't go through this helper.
     fn engine() -> Option<AudioEngine> {
+        if std::env::var("CI").is_ok() {
+            return None;
+        }
         AudioEngine::new().ok()
     }
 
