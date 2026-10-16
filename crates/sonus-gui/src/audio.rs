@@ -674,7 +674,7 @@ mod tests {
 
         publish(&controller.status, |s| s.transport = Transport::Playing);
         controller.toggle_pause();
-        std::thread::sleep(Duration::from_millis(150));
+        wait_for_transport(&controller, Transport::Paused);
         assert_eq!(controller.status().transport, Transport::Paused);
     }
 
@@ -688,7 +688,7 @@ mod tests {
 
         publish(&controller.status, |s| s.transport = Transport::Paused);
         controller.toggle_pause();
-        std::thread::sleep(Duration::from_millis(150));
+        wait_for_transport(&controller, Transport::Playing);
         assert_eq!(controller.status().transport, Transport::Playing);
     }
 
@@ -711,6 +711,18 @@ mod tests {
         for _ in 0..100 {
             let status = controller.status();
             if status.device_ready || status.error.is_some() {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    }
+
+    /// Busy-wait for a transport transition to propagate to shared state.
+    /// Commands cross an mpsc channel and are applied on the audio thread,
+    /// so fixed sleeps are flaky on loaded CI machines — poll instead.
+    fn wait_for_transport(controller: &AudioController, want: Transport) {
+        for _ in 0..200 {
+            if controller.status().transport == want {
                 return;
             }
             std::thread::sleep(Duration::from_millis(10));
