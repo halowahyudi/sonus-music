@@ -564,6 +564,16 @@ fn publish(status: &Arc<Mutex<AudioStatus>>, update: impl FnOnce(&mut AudioStatu
 mod tests {
     use super::*;
 
+    /// A live controller, or `None` on CI. The rodio backend can crash
+    /// while opening or tearing down the null device that headless Windows
+    /// runners report, so device tests exercise real hardware only.
+    fn controller() -> Option<AudioController> {
+        if std::env::var("CI").is_ok() {
+            return None;
+        }
+        Some(AudioController::spawn())
+    }
+
     #[test]
     fn transport_labels() {
         assert_eq!(Transport::Playing.label(), "PLAYING");
@@ -603,7 +613,7 @@ mod tests {
 
     #[test]
     fn controller_starts_and_shuts_down() {
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         assert_eq!(controller.status().transport, Transport::Stopped);
         // Dropping joins the thread — this test hangs if shutdown is broken.
         drop(controller);
@@ -611,14 +621,14 @@ mod tests {
 
     #[test]
     fn volume_round_trips_through_the_controller() {
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         controller.set_volume(0.42);
         assert!((controller.volume() - 0.42).abs() < 1e-6);
     }
 
     #[test]
     fn volume_is_clamped() {
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         controller.set_volume(5.0);
         assert_eq!(controller.volume(), 1.0);
         controller.set_volume(-1.0);
@@ -627,7 +637,7 @@ mod tests {
 
     #[test]
     fn stop_clears_the_current_track() {
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         controller.stop();
         // Give the audio thread a moment to process the command.
         std::thread::sleep(Duration::from_millis(100));
@@ -638,7 +648,7 @@ mod tests {
 
     #[test]
     fn take_finished_fires_once() {
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         controller.finished.store(true, Ordering::SeqCst);
         assert!(controller.take_finished());
         assert!(!controller.take_finished());
@@ -646,7 +656,7 @@ mod tests {
 
     #[test]
     fn generation_increments_on_each_play() {
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         let before = controller.generation();
         controller.play("aaaaaaaaaaa");
         controller.play("bbbbbbbbbbb");
@@ -655,7 +665,7 @@ mod tests {
 
     #[test]
     fn generation_increments_on_stop() {
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         let before = controller.generation();
         controller.stop();
         assert_eq!(controller.generation(), before + 1);
@@ -663,13 +673,7 @@ mod tests {
 
     #[test]
     fn toggle_pause_pauses_when_playing() {
-        // CI runners claim a (null) sound device, but rodio's Windows
-        // backend can fault while driving it headless — pause/resume only
-        // gets exercised on real hardware via this test.
-        if std::env::var("CI").is_ok() {
-            return;
-        }
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         // Wait for the thread to either open a device or report it can't.
         wait_for_device(&controller);
         if !controller.status().device_ready {
@@ -686,10 +690,7 @@ mod tests {
 
     #[test]
     fn toggle_pause_resumes_when_paused() {
-        if std::env::var("CI").is_ok() {
-            return;
-        }
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         wait_for_device(&controller);
         if !controller.status().device_ready {
             return;
@@ -703,7 +704,7 @@ mod tests {
 
     #[test]
     fn status_reports_whether_a_device_is_available() {
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         wait_for_device(&controller);
         // Either way the field must be meaningful rather than stuck default.
         let status = controller.status();
@@ -740,14 +741,14 @@ mod tests {
 
     #[test]
     fn eq_and_spectrum_are_shared_with_the_thread() {
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         assert_eq!(controller.eq().lock().unwrap().band(0), 0.0);
         assert_eq!(controller.spectrum().lock().unwrap().num_bars(), NUM_BARS);
     }
 
     #[test]
     fn take_error_clears_the_error() {
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         publish(&controller.status, |s| s.error = Some("boom".into()));
         assert_eq!(controller.take_error().as_deref(), Some("boom"));
         assert!(controller.take_error().is_none());
@@ -775,7 +776,7 @@ mod tests {
     fn transport_round_trips_through_the_shared_status() {
         // `publish` is how the audio thread talks to the GUI; the copy in
         // `status()` must reflect every field.
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         publish(&controller.status, |s| {
             s.transport = Transport::Buffering;
             s.current_id = Some("abcdefghijk".into());
@@ -796,7 +797,7 @@ mod tests {
     fn buffering_is_not_reported_as_playing() {
         // The GUI keys its "buffering" spinner and frozen clock off this, so a
         // gated track must never look like it's playing.
-        let controller = AudioController::spawn();
+        let Some(controller) = controller() else { return };
         publish(&controller.status, |s| s.transport = Transport::Buffering);
         assert!(!matches!(controller.status().transport, Transport::Playing));
     }
