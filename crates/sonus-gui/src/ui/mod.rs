@@ -145,18 +145,13 @@ fn handle_keys(app: &mut SonusApp, ctx: &egui::Context) {
             app.focus_search = true;
         }
 
-        // Play the highlighted search result.
+        // Play the highlighted search result. A single track plus a radio
+        // tail — search results no longer fill the whole queue.
         if input.key_pressed(Key::Enter) && app.view == View::Search {
             if let Some(index) = app.search_cursor {
-                if app.search_results.get(index).is_some() {
-                    let tracks: Vec<sonus_core::Track> = app
-                        .search_results
-                        .iter()
-                        .map(sonus_core::Track::from)
-                        .collect();
-                    let query = app.search_input.trim().to_string();
-                    app.play_list(tracks, index, sonus_core::QueueSource::Search(query));
-                    app.view = View::Queue;
+                if let Some(result) = app.search_results.get(index) {
+                    let track: sonus_core::Track = result.into();
+                    app.play_now(track);
                 }
             }
         }

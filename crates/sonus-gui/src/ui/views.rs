@@ -172,22 +172,64 @@ fn search(ui: &mut egui::Ui, app: &mut SonusApp, palette: &Palette) {
 
                 let response = list::row(ui, row_width, &content, state, palette, app.is_liked(id));
 
+                // A click plays the track right away with a fresh radio tail —
+                // search no longer dumps every result into the queue.
                 if response.clicked() {
-                    play_search_result(app, index);
+                    play_search_now(app, index);
                 }
-                if response.secondary_clicked() {
-                    enqueue_search_result(app, index);
+                if response.double_clicked() {
+                    play_search_now(app, index);
                 }
+
+                // Everything else lives in the context menu.
+                response.context_menu(|ui| {
+                    if ui.button("Play now").clicked() {
+                        play_search_now(app, index);
+                        ui.close_menu();
+                    }
+                    if ui.button("Play next").clicked() {
+                        play_next_search_result(app, index);
+                        ui.close_menu();
+                    }
+                    if ui.button("Add to queue").clicked() {
+                        enqueue_search_result(app, index);
+                        ui.close_menu();
+                    }
+                    ui.separator();
+                    if ui.button("Start radio").clicked() {
+                        // Restart playback from this track and let its
+                        // recommendations replace the current autoplay tail.
+                        play_search_now(app, index);
+                        ui.close_menu();
+                    }
+                    if ui
+                        .button(if app.is_liked(id) { "Unlike" } else { "Like" })
+                        .clicked()
+                    {
+                        if let Some(result) = app.search_results.get(index) {
+                            let track: Track = result.into();
+                            app.toggle_like(&track);
+                        }
+                        ui.close_menu();
+                    }
+                });
             }
             ui.add_space(6.0);
         });
 }
 
-fn play_search_result(app: &mut SonusApp, index: usize) {
-    let tracks: Vec<Track> = app.search_results.iter().map(Track::from).collect();
-    let query = app.search_input.trim().to_string();
-    app.play_list(tracks, index, QueueSource::Search(query));
-    app.view = View::Queue;
+fn play_search_now(app: &mut SonusApp, index: usize) {
+    if let Some(result) = app.search_results.get(index) {
+        let track: Track = result.into();
+        app.play_now(track);
+    }
+}
+
+fn play_next_search_result(app: &mut SonusApp, index: usize) {
+    if let Some(result) = app.search_results.get(index) {
+        let track: Track = result.into();
+        app.play_next(track);
+    }
 }
 
 fn enqueue_search_result(app: &mut SonusApp, index: usize) {
@@ -268,7 +310,7 @@ fn queue(ui: &mut egui::Ui, app: &mut SonusApp, palette: &Palette) {
 
     // ---- rows -------------------------------------------------------------
     let cursor = app.player.queue.current_index();
-    let items: Vec<(usize, Track)> = app
+    let items: Vec<(usize, sonus_core::QueueItem)> = app
         .player
         .queue
         .items()
@@ -290,7 +332,8 @@ fn queue(ui: &mut egui::Ui, app: &mut SonusApp, palette: &Palette) {
         .auto_shrink([false, false])
         .show(ui, |ui| {
             let row_width = ui.available_width();
-            for (index, track) in &items {
+            for (index, item) in &items {
+                let track = &item.track;
                 let is_current = Some(*index) == cursor;
                 let state = if is_current {
                     RowState::Playing
@@ -306,7 +349,7 @@ fn queue(ui: &mut egui::Ui, app: &mut SonusApp, palette: &Palette) {
                     title: &track.title,
                     subtitle: track.artist.as_deref(),
                     duration: Some(&duration),
-                    badge: None,
+                    badge: if item.is_autoplay { Some("AUTO") } else { None },
                 };
 
                 let response = list::row(

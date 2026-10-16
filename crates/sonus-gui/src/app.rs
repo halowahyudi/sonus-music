@@ -133,7 +133,7 @@ impl Player {
     /// from the frontier is what actually grows the queue — seeding from the
     /// current track is why playback used to stall at the end of a list.
     pub fn radio_seed_track(&self) -> Option<&Track> {
-        self.queue.items().last()
+        self.queue.items().last().map(|item| &item.track)
     }
 
     /// Should we pull more tracks when the queue runs out?
@@ -722,30 +722,32 @@ impl SonusApp {
 
         // Merge into the queue entry, keeping the title we already showed so
         // the display doesn't jump mid-playback. Only fill in fields the
-        // search result couldn't provide.
+        // search result couldn't provide. The autoplay flag survives the merge.
         if let Some(index) = self
             .player
             .queue
             .items()
             .iter()
-            .position(|t| t.youtube_id == enriched.youtube_id)
+            .position(|item| item.track.youtube_id == enriched.youtube_id)
         {
-            let mut tracks = self.player.queue.items().to_vec();
-            let existing = &mut tracks[index];
-            if existing.album.is_none() {
-                existing.album = enriched.album.clone();
-            }
-            if existing.duration_secs.is_none() {
-                existing.duration_secs = enriched.duration_secs;
-            }
-            if existing.thumbnail_url.is_none() {
-                existing.thumbnail_url = enriched.thumbnail_url.clone();
-            }
-
-            let cursor = self.player.queue.current_index();
-            let source = self.player.queue.source().clone();
-            self.player.queue.load(tracks, cursor.unwrap_or(0));
-            self.player.queue.set_source(source);
+            let existing = self.player.queue.track_at(index);
+            let merged = {
+                let mut track = enriched.clone();
+                if let Some(existing) = existing {
+                    track.title = existing.title.clone();
+                    if track.album.is_none() {
+                        track.album = existing.album.clone();
+                    }
+                    if track.duration_secs.is_none() {
+                        track.duration_secs = existing.duration_secs;
+                    }
+                    if track.thumbnail_url.is_none() {
+                        track.thumbnail_url = existing.thumbnail_url.clone();
+                    }
+                }
+                track
+            };
+            self.player.queue.update_track_at(index, merged);
         }
 
         if let Some(db) = self.db.as_ref() {
@@ -863,7 +865,7 @@ impl SonusApp {
             .queue
             .items()
             .iter()
-            .map(|t| t.youtube_id.clone())
+            .map(|item| item.track.youtube_id.clone())
             .collect();
 
         self.player.radio_pending = Pending::start(&handle, async move {
@@ -895,7 +897,7 @@ impl SonusApp {
         };
 
         let added = match result {
-            Ok(tracks) => self.player.queue.extend(tracks),
+            Ok(tracks) => self.player.queue.extend_autoplay(tracks),
             Err(e) => {
                 // Radio is an enhancement — failing it shouldn't interrupt
                 // playback. Drop the wait so we don't sit here forever.
@@ -959,7 +961,7 @@ impl SonusApp {
             return;
         };
 
-        let tracks = self.player.queue.items().to_vec();
+        let tracks = self.player.queue.tracks();
         match Playlists::create_with(db, name, &tracks) {
             Ok(_) => {
                 self.refresh_library();

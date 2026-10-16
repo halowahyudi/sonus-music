@@ -60,6 +60,17 @@ impl RepeatMode {
     }
 }
 
+/// A row in the queue: the track plus where it came from.
+///
+/// Manual additions are `is_autoplay == false`; the radio tail that keeps the
+/// music going after the user's picks is `true`, so the UI can render it
+/// dimmed with an "AUTO" badge and the player can treat it as disposable.
+#[derive(Debug, Clone)]
+pub struct QueueItem {
+    pub track: Track,
+    pub is_autoplay: bool,
+}
+
 /// The playback queue.
 ///
 /// Owns the full `Track` values rather than IDs so the UI can render the list
@@ -67,13 +78,13 @@ impl RepeatMode {
 /// tracks of metadata is a trivial amount of memory.
 #[derive(Debug, Clone, Default)]
 pub struct Queue {
-    items: Vec<Track>,
+    items: Vec<QueueItem>,
     /// Index of the track currently loaded, or `None` when stopped.
     cursor: Option<usize>,
     repeat: RepeatMode,
     shuffle: bool,
     /// Item order from before shuffling, so un-shuffling can restore it.
-    unshuffled: Option<Vec<Track>>,
+    unshuffled: Option<Vec<QueueItem>>,
     source: QueueSource,
 }
 
@@ -85,7 +96,13 @@ impl Queue {
     /// Replace the queue contents and point the cursor at `start`.
     /// `start` is clamped into range; an empty list clears the cursor.
     pub fn load(&mut self, tracks: Vec<Track>, start: usize) {
-        self.items = tracks;
+        self.items = tracks
+            .into_iter()
+            .map(|track| QueueItem {
+                track,
+                is_autoplay: false,
+            })
+            .collect();
         self.unshuffled = None;
         self.shuffle = false;
         self.cursor = if self.items.is_empty() {
@@ -103,8 +120,38 @@ impl Queue {
         &self.source
     }
 
-    pub fn items(&self) -> &[Track] {
+    /// The queue rows, in playback order — tracks with their autoplay flags.
+    pub fn items(&self) -> &[QueueItem] {
         &self.items
+    }
+
+    /// The tracks in order, with autoplay flags stripped. For callers that
+    /// only care about the music itself (playlist export, metadata merge).
+    pub fn tracks(&self) -> Vec<Track> {
+        self.items.iter().map(|item| item.track.clone()).collect()
+    }
+
+    /// The track at `index`, or `None` when out of range.
+    pub fn track_at(&self, index: usize) -> Option<&Track> {
+        self.items.get(index).map(|item| &item.track)
+    }
+
+    /// Whether the track at `index` was added by the radio tail.
+    pub fn is_autoplay(&self, index: usize) -> bool {
+        self.items
+            .get(index)
+            .map(|item| item.is_autoplay)
+            .unwrap_or(false)
+    }
+
+    /// Replace the track at `index`, keeping its autoplay flag. Used to merge
+    /// enriched metadata into an existing row without disturbing the flag.
+    pub fn update_track_at(&mut self, index: usize, track: Track) -> bool {
+        if index >= self.items.len() {
+            return false;
+        }
+        self.items[index].track = track;
+        true
     }
 
     pub fn len(&self) -> usize {
@@ -120,7 +167,9 @@ impl Queue {
     }
 
     pub fn current(&self) -> Option<&Track> {
-        self.cursor.and_then(|i| self.items.get(i))
+        self.cursor
+            .and_then(|i| self.items.get(i))
+            .map(|item| &item.track)
     }
 
     pub fn current_index(&self) -> Option<usize> {
@@ -128,7 +177,17 @@ impl Queue {
     }
 
     /// Tracks after the cursor, in playback order.
-    pub fn upcoming(&self) -> &[Track] {
+    pub fn upcoming(&self) -> Vec<&Track> {
+        match self.cursor {
+            Some(i) if i + 1 < self.items.len() => {
+                self.items[i + 1..].iter().map(|item| &item.track).collect()
+            }
+            _ => Vec::new(),
+        }
+    }
+
+    /// Upcoming rows with their autoplay flags, for the queue view.
+    pub fn upcoming_items(&self) -> &[QueueItem] {
         match self.cursor {
             Some(i) if i + 1 < self.items.len() => &self.items[i + 1..],
             _ => &[],
@@ -194,20 +253,39 @@ impl Queue {
         }
     }
 
-    /// Append to the end of the queue. Returns false if already present.
+    /// Append a manually-picked track. Returns false if already present.
     pub fn push_back(&mut self, track: Track) -> bool {
+        self.push_item(track, false)
+    }
+
+    /// Insert directly after the current track — "play next".
+    pub fn push_next(&mut self, track: Track) -> bool {
+        self.push_next_item(track, false)
+    }
+
+    /// Append a radio track. Autoplay rows are disposable: clearing or
+    /// removing them never affects the user's manual picks.
+    pub fn push_autoplay(&mut self, track: Track) -> bool {
+        self.push_item(track, true)
+    }
+
+    /// Insert a radio track directly after the current one.
+    pub fn push_next_autoplay(&mut self, track: Track) -> bool {
+        self.push_next_item(track, true)
+    }
+
+    fn push_item(&mut self, track: Track, is_autoplay: bool) -> bool {
         if self.contains(&track.youtube_id) {
             return false;
         }
-        self.items.push(track);
+        self.items.push(QueueItem { track, is_autoplay });
         if self.cursor.is_none() {
             self.cursor = Some(0);
         }
         true
     }
 
-    /// Insert directly after the current track — "play next".
-    pub fn push_next(&mut self, track: Track) -> bool {
+    fn push_next_item(&mut self, track: Track, is_autoplay: bool) -> bool {
         if self.contains(&track.youtube_id) {
             return false;
         }
@@ -215,14 +293,15 @@ impl Queue {
             Some(i) => i + 1,
             None => 0,
         };
-        self.items.insert(at.min(self.items.len()), track);
+        self.items
+            .insert(at.min(self.items.len()), QueueItem { track, is_autoplay });
         if self.cursor.is_none() {
             self.cursor = Some(0);
         }
         true
     }
 
-    /// Append several tracks, skipping ones already queued.
+    /// Append several manually-picked tracks, skipping ones already queued.
     /// Returns how many were actually added.
     pub fn extend(&mut self, tracks: impl IntoIterator<Item = Track>) -> usize {
         let mut added = 0;
@@ -234,8 +313,22 @@ impl Queue {
         added
     }
 
+    /// Append a radio batch, skipping ones already queued. Returns how many
+    /// were actually added.
+    pub fn extend_autoplay(&mut self, tracks: impl IntoIterator<Item = Track>) -> usize {
+        let mut added = 0;
+        for track in tracks {
+            if self.push_autoplay(track) {
+                added += 1;
+            }
+        }
+        added
+    }
+
     pub fn contains(&self, youtube_id: &str) -> bool {
-        self.items.iter().any(|t| t.youtube_id == youtube_id)
+        self.items
+            .iter()
+            .any(|item| item.track.youtube_id == youtube_id)
     }
 
     /// Remove the track at `index`, keeping the cursor on the same song.
@@ -259,7 +352,7 @@ impl Queue {
             }
             other => other,
         };
-        Some(removed)
+        Some(removed.track)
     }
 
     /// Move a track within the queue.
@@ -326,7 +419,7 @@ impl Queue {
                 if let Some(pos) = self
                     .items
                     .iter()
-                    .position(|t| t.youtube_id == current.youtube_id)
+                    .position(|item| item.track.youtube_id == current.youtube_id)
                 {
                     self.cursor = Some(pos);
                 }
@@ -337,7 +430,7 @@ impl Queue {
                 if let Some(pos) = self
                     .items
                     .iter()
-                    .position(|t| t.youtube_id == current.youtube_id)
+                    .position(|item| item.track.youtube_id == current.youtube_id)
                 {
                     self.cursor = Some(pos);
                 }
@@ -353,7 +446,10 @@ impl Queue {
 
     /// Total runtime of everything in the queue, ignoring unknown durations.
     pub fn total_duration_secs(&self) -> u64 {
-        self.items.iter().filter_map(|t| t.duration_secs).sum()
+        self.items
+            .iter()
+            .filter_map(|item| item.track.duration_secs)
+            .sum()
     }
 
     /// Total runtime as `H:MM:SS` or `M:SS`.
@@ -379,7 +475,7 @@ fn format_duration(total: u64) -> String {
 
 /// Fisher-Yates using a seeded xorshift. Avoids pulling in the `rand` crate
 /// for what is a handful of lines, and keeps the shuffle testable.
-fn shuffle_in_place(items: &mut [Track]) {
+fn shuffle_in_place(items: &mut [QueueItem]) {
     if items.len() < 2 {
         return;
     }
@@ -419,7 +515,10 @@ mod tests {
     }
 
     fn ids(q: &Queue) -> Vec<String> {
-        q.items().iter().map(|t| t.youtube_id.clone()).collect()
+        q.items()
+            .iter()
+            .map(|item| item.track.youtube_id.clone())
+            .collect()
     }
 
     #[test]
@@ -743,5 +842,69 @@ mod tests {
         assert!(QueueSource::Radio.extends_itself());
         assert!(QueueSource::Search("x".into()).extends_itself());
         assert!(!QueueSource::Manual.extends_itself());
+    }
+
+    #[test]
+    fn manual_picks_are_not_autoplay() {
+        let mut q = Queue::new();
+        q.push_back(Track::new("a", "A"));
+        q.push_next(Track::new("b", "B"));
+        assert!(!q.is_autoplay(0));
+        assert!(!q.is_autoplay(1));
+        assert_eq!(q.tracks().len(), 2);
+    }
+
+    #[test]
+    fn autoplay_tracks_are_flagged() {
+        let mut q = Queue::new();
+        q.push_back(Track::new("a", "A"));
+        q.push_autoplay(Track::new("b", "B"));
+        q.push_next_autoplay(Track::new("c", "C"));
+        assert!(!q.is_autoplay(0));
+        assert!(q.is_autoplay(1));
+        assert!(q.is_autoplay(2));
+    }
+
+    #[test]
+    fn extend_autoplay_flags_every_row() {
+        let mut q = Queue::new();
+        q.extend(tracks(&["a", "b"]));
+        let added = q.extend_autoplay(tracks(&["c", "d"]));
+        assert_eq!(added, 2);
+        assert!(q.is_autoplay(2));
+        assert!(q.is_autoplay(3));
+        assert!(!q.is_autoplay(0));
+        assert!(!q.is_autoplay(1));
+    }
+
+    #[test]
+    fn update_track_keeps_the_autoplay_flag() {
+        let mut q = Queue::new();
+        q.extend_autoplay(tracks(&["a"]));
+        assert!(q.is_autoplay(0));
+        assert!(q.update_track_at(0, Track::new("a", "New Title")));
+        assert!(q.is_autoplay(0));
+        assert_eq!(q.track_at(0).unwrap().title, "New Title");
+        assert!(!q.update_track_at(9, Track::new("x", "X")));
+    }
+
+    #[test]
+    fn load_resets_flags_to_manual() {
+        let mut q = Queue::new();
+        q.extend_autoplay(tracks(&["a", "b"]));
+        q.load(tracks(&["c", "d"]), 0);
+        assert!(!q.is_autoplay(0));
+        assert!(!q.is_autoplay(1));
+    }
+
+    #[test]
+    fn upcoming_items_carry_flags() {
+        let mut q = Queue::new();
+        q.load(tracks(&["a", "b", "c"]), 0);
+        q.push_autoplay(Track::new("d", "D"));
+        let upcoming = q.upcoming_items();
+        assert_eq!(upcoming.len(), 3);
+        assert!(!upcoming[0].is_autoplay);
+        assert!(upcoming[2].is_autoplay);
     }
 }
