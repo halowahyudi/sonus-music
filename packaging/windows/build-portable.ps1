@@ -11,7 +11,7 @@
 $ErrorActionPreference = "Stop"
 
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
-$Version = "0.2.0"
+$Version = "0.3.0"
 $Dist = Join-Path $PSScriptRoot "dist"
 $Stage = Join-Path $Dist "sonus-portable"
 

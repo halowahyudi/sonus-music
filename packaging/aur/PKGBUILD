@@ -1,26 +1,32 @@
-# Maintainer: Sonus Contributors
+# Maintainer: Winter Cold <hi@wahyudi.dev>
 # AUR package for Sonus.
 #
 # yt-dlp and ffmpeg are deliberately NOT hard dependencies here: Sonus can
 # download its own copies into the user data dir. But if they're already on
-# the system (makedepends for python), resolution prefers them, which is the
-# nicer outcome for most users.
+# the system, resolution prefers them, which is the nicer outcome for most
+# users.
+#
+# RELEASE: every vX.Y.Z tag in the GitHub repo needs a matching PKGBUILD
+# update here (pkgver + sha256sums), then a push to the AUR.
 pkgname=sonus
-pkgver=0.2.0
+pkgver=0.3.0
 pkgrel=1
 pkgdesc="Free, local-first music player powered by yt-dlp"
 arch=('x86_64')
 url="https://github.com/halowahyudi/sonus-music"
 license=('MIT')
-depends=('glibc' 'gcc-libs' 'libxkbcommon' 'wayland')
+depends=('glibc' 'gcc-libs')
 makedepends=('rust' 'cargo')
-optdepends=('yt-dlp: recommended, else Sonus downloads its own' 'ffmpeg: recommended, else Sonus downloads its own')
+optdepends=(
+    'yt-dlp: recommended, else Sonus downloads its own'
+    'ffmpeg: recommended, else Sonus downloads its own'
+)
 source=("$url/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 build() {
     cd "$srcdir/sonus-$pkgver"
-    cargo build --release --locked
+    cargo build --release --locked --frozen
 }
 
 package() {

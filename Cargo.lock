@@ -3861,7 +3861,7 @@ dependencies = [
 
 [[package]]
 name = "sonus"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -3879,7 +3879,7 @@ dependencies = [
 
 [[package]]
 name = "sonus-audio"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "rodio",
  "rustfft",
@@ -3890,7 +3890,7 @@ dependencies = [
 
 [[package]]
 name = "sonus-cache"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "dirs",
  "sonus-core",
@@ -3899,7 +3899,7 @@ dependencies = [
 
 [[package]]
 name = "sonus-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3909,7 +3909,7 @@ dependencies = [
 
 [[package]]
 name = "sonus-deps"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "dirs",
  "flate2",
@@ -3922,7 +3922,7 @@ dependencies = [
 
 [[package]]
 name = "sonus-gui"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "dirs",
  "eframe",
@@ -3944,7 +3944,7 @@ dependencies = [
 
 [[package]]
 name = "sonus-library"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "dirs",
  "rusqlite",
@@ -3956,7 +3956,7 @@ dependencies = [
 
 [[package]]
 name = "sonus-ytdlp"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "reqwest",
  "serde",

@@ -9,7 +9,7 @@
 ; installer tiny and means the tools are always updatable without reinstalling.
 
 #ifndef MyAppVersion
-  #define MyAppVersion "0.2.0"
+  #define MyAppVersion "0.3.0"
 #endif
 #ifndef MyAppDir
   #define MyAppDir "..\..\target\release"

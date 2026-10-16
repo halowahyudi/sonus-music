@@ -16,6 +16,48 @@ yt-dlp, with a retro pixel-art desktop GUI. No ads, no accounts, no cost.
 - **Cross-platform** — Linux, Windows, macOS
 - **Low memory** — streams instead of hoarding; audio is never fully downloaded
 
+## Install
+
+Pick whichever matches your platform:
+
+### Arch Linux (AUR)
+
+```bash
+yay -S sonus        # or: paru -S sonus
+```
+
+Packages are published from the `packaging/aur/` directory. yt-dlp and ffmpeg
+are *optional* dependencies — Sonus downloads its own copies on first launch,
+or you can install them yourself (`sudo pacman -S yt-dlp ffmpeg`).
+
+### Windows
+
+1. Download **sonus-setup.exe** from the latest
+   [GitHub Releases](https://github.com/halowahyudi/sonus-music/releases)
+2. Run it — no admin rights needed, no command line
+3. On first launch Sonus offers to download yt-dlp and ffmpeg for you
+
+A portable `sonus-windows-x86_64.zip` is also published — unzip and run
+`sonus.exe` from any folder.
+
+### macOS
+
+Download **Sonus.app** (`.tar.gz`) from GitHub Releases, drag it into
+`/Applications`, and right-click → Open the first time (unsigned app).
+
+### Anywhere else / from source
+
+```bash
+cargo install --path crates/sonus --locked
+```
+
+or build a release binary:
+
+```bash
+cargo build --release
+./target/release/sonus
+```
+
 ## Requirements
 
 Sonus streams audio through two external tools: **yt-dlp** (resolves and
@@ -110,6 +152,19 @@ The window is compact and frameless, laid out like a piece of hardware:
 - **Status bar** — notices, queue time remaining, keyboard hints
 
 Right-click a row for a context menu (play, queue, like, remove, reorder).
+
+In **Search**, a click plays the track now and starts a radio tail from it.
+Use the context menu (right-click) for finer control:
+
+- **Play next** — insert right after the current track
+- **Add to queue** — append without disrupting playback
+- **Start radio** — reboot playback from this track with its recommendations
+
+Radio tracks in the queue carry an `AUTO` badge — they're disposable filler
+whose job is to keep the music going after your picks end. If the network
+radio ever comes back empty or fails, Sonus falls back to your own listening
+history (same artist, then most-played, then old favourites) so playback
+keeps going even offline.
 
 ## Custom Themes
 
