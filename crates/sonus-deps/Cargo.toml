@@ -1,0 +1,16 @@
+[package]
+name = "sonus-deps"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Downloads and manages the yt-dlp and ffmpeg binaries Sonus needs"
+
+[dependencies]
+ureq.workspace = true
+flate2.workspace = true
+sha2.workspace = true
+dirs.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

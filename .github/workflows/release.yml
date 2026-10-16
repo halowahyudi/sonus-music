@@ -1,0 +1,130 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x86_64
+            os: ubuntu-latest
+            artifact: sonus-linux-x86_64.tar.gz
+          - name: Windows x86_64
+            os: windows-latest
+            artifact: sonus-windows-x86_64.zip
+          - name: macOS x86_64
+            os: macos-13
+            artifact: sonus-macos-x86_64.tar.gz
+          - name: macOS arm64
+            os: macos-latest
+            artifact: sonus-macos-arm64.tar.gz
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev libxkbcommon-dev libwayland-dev \
+            libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            dpkg-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build release
+        run: cargo build --release -p sonus
+
+      # ---- Linux packages -------------------------------------------------
+      - name: Build .deb
+        if: runner.os == 'Linux'
+        working-directory: crates/sonus
+        run: |
+          cargo install cargo-deb --locked
+          cargo deb
+          mkdir -p $GITHUB_WORKSPACE/dist
+          cp $GITHUB_WORKSPACE/target/debian/*.deb $GITHUB_WORKSPACE/dist/
+
+      - name: Build .rpm
+        if: runner.os == 'Linux'
+        working-directory: crates/sonus
+        run: |
+          cargo install cargo-generate-rpm --locked
+          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/target cargo generate-rpm
+          mkdir -p $GITHUB_WORKSPACE/dist
+          cp $GITHUB_WORKSPACE/target/generate-rpm/*.rpm $GITHUB_WORKSPACE/dist/
+
+      - name: Tar Linux binary
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist
+          tar -czf dist/${{ matrix.artifact }} -C target/release sonus
+
+      # ---- Windows packages ----------------------------------------------
+      - name: Build Inno Setup installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $version = (Select-String -Path Cargo.toml '^version\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" packaging/windows/sonus.iss /DMyAppVersion=$version
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item packaging/windows/dist/*.exe dist/
+
+      - name: Zip Windows binary
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/stage/sonus | Out-Null
+          Copy-Item target/release/sonus.exe dist/stage/sonus/
+          Copy-Item LICENSE dist/stage/sonus/
+          Copy-Item packaging/assets/sonus.ico dist/stage/sonus/
+          Compress-Archive -Path dist/stage/sonus/* -DestinationPath dist/${{ matrix.artifact }}
+          Remove-Item -Recurse -Force dist/stage
+
+      # ---- macOS packages ------------------------------------------------
+      - name: Build macOS .app bundle
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p "dist/Sonus.app/Contents/MacOS"
+          mkdir -p "dist/Sonus.app/Contents/Resources"
+          cp target/release/sonus "dist/Sonus.app/Contents/MacOS/sonus"
+          cp packaging/assets/png/sonus-512x512.png "dist/Sonus.app/Contents/Resources/sonus.png"
+          cp packaging/macos/Info.plist "dist/Sonus.app/Contents/Info.plist"
+          tar -czf dist/${{ matrix.artifact }} -C dist Sonus.app
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**
+          generate_release_notes: true

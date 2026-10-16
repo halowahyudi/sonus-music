@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Sonus
+GenericName=Music Player
+Comment=Retro green-themed music player
+Exec=sonus %U
+Icon=sonus
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=music;audio;player;retro;winamp;
+StartupWMClass=sonus

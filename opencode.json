@@ -1,0 +1,5 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "sonus-dev",
+  "instructions": ["AGENTS.md"]
+}

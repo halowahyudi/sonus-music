@@ -1,0 +1,15 @@
+[package]
+name = "sonus-library"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "SQLite-backed library for Sonus"
+
+[dependencies]
+sonus-core.workspace = true
+rusqlite.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+serde.workspace = true
+dirs.workspace = true

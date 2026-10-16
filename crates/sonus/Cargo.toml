@@ -1,0 +1,108 @@
+[package]
+name = "sonus"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description.workspace = true
+
+[[bin]]
+name = "sonus"
+path = "src/main.rs"
+
+[dependencies]
+sonus-core.workspace = true
+sonus-ytdlp.workspace = true
+sonus-deps.workspace = true
+sonus-audio.workspace = true
+sonus-library.workspace = true
+sonus-cache.workspace = true
+sonus-gui.workspace = true
+tokio.workspace = true
+clap.workspace = true
+anyhow.workspace = true
+eframe.workspace = true
+egui.workspace = true
+
+# ---------------------------------------------------------------------------
+# Debian package (cargo deb). Run from the crate: cargo deb -p sonus
+# ---------------------------------------------------------------------------
+[package.metadata.deb]
+maintainer = "Sonus Contributors <sonus@example.com>"
+copyright = "2026, Sonus Contributors"
+depends = "$auto"
+section = "sound"
+priority = "optional"
+assets = [
+  ["target/release/sonus", "usr/bin/", "755"],
+  ["../../packaging/assets/sonus.desktop", "usr/share/applications/", "644"],
+  ["../../packaging/assets/png/sonus-16x16.png", "usr/share/icons/hicolor/16x16/apps/sonus.png", "644"],
+  ["../../packaging/assets/png/sonus-22x22.png", "usr/share/icons/hicolor/22x22/apps/sonus.png", "644"],
+  ["../../packaging/assets/png/sonus-24x24.png", "usr/share/icons/hicolor/24x24/apps/sonus.png", "644"],
+  ["../../packaging/assets/png/sonus-32x32.png", "usr/share/icons/hicolor/32x32/apps/sonus.png", "644"],
+  ["../../packaging/assets/png/sonus-48x48.png", "usr/share/icons/hicolor/48x48/apps/sonus.png", "644"],
+  ["../../packaging/assets/png/sonus-64x64.png", "usr/share/icons/hicolor/64x64/apps/sonus.png", "644"],
+  ["../../packaging/assets/png/sonus-96x96.png", "usr/share/icons/hicolor/96x96/apps/sonus.png", "644"],
+  ["../../packaging/assets/png/sonus-128x128.png", "usr/share/icons/hicolor/128x128/apps/sonus.png", "644"],
+  ["../../packaging/assets/png/sonus-256x256.png", "usr/share/icons/hicolor/256x256/apps/sonus.png", "644"],
+  ["../../packaging/assets/png/sonus-512x512.png", "usr/share/icons/hicolor/512x512/apps/sonus.png", "644"],
+]
+
+# ---------------------------------------------------------------------------
+# RPM package (cargo generate-rpm). Run from the crate: cargo generate-rpm
+#
+# NOTE: unlike cargo-deb, generate-rpm expects destination paths to start
+# with `/` (rpmpack rejects bare relative paths).
+# ---------------------------------------------------------------------------
+[package.metadata.generate-rpm]
+name = "sonus"
+description = "Free, local-first music player powered by yt-dlp"
+summary = "Sonus music player"
+license = "MIT"
+url = "https://github.com/halowahyudi/sonus-music"
+release = "1"
+
+[[package.metadata.generate-rpm.assets]]
+source = "target/release/sonus"
+dest = "/usr/bin/"
+mode = "755"
+
+[[package.metadata.generate-rpm.assets]]
+source = "../../packaging/assets/sonus.desktop"
+dest = "/usr/share/applications/"
+mode = "644"
+
+[[package.metadata.generate-rpm.assets]]
+source = "../../packaging/assets/png/sonus-16x16.png"
+dest = "/usr/share/icons/hicolor/16x16/apps/sonus.png"
+mode = "644"
+
+[[package.metadata.generate-rpm.assets]]
+source = "../../packaging/assets/png/sonus-32x32.png"
+dest = "/usr/share/icons/hicolor/32x32/apps/sonus.png"
+mode = "644"
+
+[[package.metadata.generate-rpm.assets]]
+source = "../../packaging/assets/png/sonus-48x48.png"
+dest = "/usr/share/icons/hicolor/48x48/apps/sonus.png"
+mode = "644"
+
+[[package.metadata.generate-rpm.assets]]
+source = "../../packaging/assets/png/sonus-64x64.png"
+dest = "/usr/share/icons/hicolor/64x64/apps/sonus.png"
+mode = "644"
+
+[[package.metadata.generate-rpm.assets]]
+source = "../../packaging/assets/png/sonus-128x128.png"
+dest = "/usr/share/icons/hicolor/128x128/apps/sonus.png"
+mode = "644"
+
+[[package.metadata.generate-rpm.assets]]
+source = "../../packaging/assets/png/sonus-256x256.png"
+dest = "/usr/share/icons/hicolor/256x256/apps/sonus.png"
+mode = "644"
+
+[[package.metadata.generate-rpm.assets]]
+source = "../../packaging/assets/png/sonus-512x512.png"
+dest = "/usr/share/icons/hicolor/512x512/apps/sonus.png"
+mode = "644"

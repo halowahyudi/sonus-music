@@ -1,0 +1,37 @@
+# Maintainer: Sonus Contributors
+# AUR package for Sonus.
+#
+# yt-dlp and ffmpeg are deliberately NOT hard dependencies here: Sonus can
+# download its own copies into the user data dir. But if they're already on
+# the system (makedepends for python), resolution prefers them, which is the
+# nicer outcome for most users.
+pkgname=sonus
+pkgver=0.2.0
+pkgrel=1
+pkgdesc="Free, local-first music player powered by yt-dlp"
+arch=('x86_64')
+url="https://github.com/halowahyudi/sonus-music"
+license=('MIT')
+depends=('glibc' 'gcc-libs' 'libxkbcommon' 'wayland')
+makedepends=('rust' 'cargo')
+optdepends=('yt-dlp: recommended, else Sonus downloads its own' 'ffmpeg: recommended, else Sonus downloads its own')
+source=("$url/archive/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "$srcdir/sonus-$pkgver"
+    cargo build --release --locked
+}
+
+package() {
+    cd "$srcdir/sonus-$pkgver"
+
+    install -Dm755 target/release/sonus "$pkgdir/usr/bin/sonus"
+    install -Dm644 packaging/assets/sonus.desktop "$pkgdir/usr/share/applications/sonus.desktop"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+    for size in 16 22 24 32 48 64 96 128 256 512; do
+        install -Dm644 "packaging/assets/png/sonus-${size}x${size}.png" \
+            "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/sonus.png"
+    done
+}

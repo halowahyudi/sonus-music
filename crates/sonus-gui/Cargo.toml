@@ -1,0 +1,25 @@
+[package]
+name = "sonus-gui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Native desktop GUI for Sonus (egui)"
+
+[dependencies]
+sonus-core.workspace = true
+sonus-audio.workspace = true
+sonus-ytdlp.workspace = true
+sonus-deps.workspace = true
+sonus-library.workspace = true
+sonus-cache.workspace = true
+eframe.workspace = true
+egui.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+dirs.workspace = true
+egui_extras = { version = "0.29", features = ["http", "image"] }
+rustfft = "6.4.1"
+image = "0.25"

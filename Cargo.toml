@@ -1,0 +1,72 @@
+[workspace]
+members = [
+    "crates/sonus",
+    "crates/sonus-core",
+    "crates/sonus-ytdlp",
+    "crates/sonus-deps",
+    "crates/sonus-audio",
+    "crates/sonus-library",
+    "crates/sonus-cache",
+    "crates/sonus-gui",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+authors = ["Sonus Contributors"]
+repository = "https://github.com/halowahyudi/sonus-music"
+description = "Free, local-first music player powered by yt-dlp"
+
+[workspace.dependencies]
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# IDs
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Storage
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# Audio playback
+rodio = "0.20"
+
+# GUI (native desktop, not browser)
+eframe = { version = "0.29", default-features = false, features = ["default_fonts", "wgpu", "wayland"] }
+egui = "0.29"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Cross-platform dirs
+dirs = "5"
+
+# Config file parsing
+toml = "0.8"
+
+# HTTP (lightweight, rustls-backed — already pulled in via eframe's ehttp)
+ureq = "2"
+
+# Archive decompression (ffmpeg ships as a gzip stream)
+flate2 = "1"
+
+# SHA-256 verification of downloaded binaries
+sha2 = "0.10"
+
+# Internal crates
+sonus-core = { path = "crates/sonus-core" }
+sonus-ytdlp = { path = "crates/sonus-ytdlp" }
+sonus-deps = { path = "crates/sonus-deps" }
+sonus-audio = { path = "crates/sonus-audio" }
+sonus-library = { path = "crates/sonus-library" }
+sonus-cache = { path = "crates/sonus-cache" }
+sonus-gui = { path = "crates/sonus-gui" }

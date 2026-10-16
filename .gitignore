@@ -1,0 +1,31 @@
+# Rust build artifacts
+target/
+
+# opencode local config (agents, commands, skills — not for the repo)
+.opencode/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Sonus runtime data (generated at runtime, not committed)
+# These live under the user's data dir, but just in case:
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+cache/
+
+# Packaged artifacts
+packaging/windows/dist/
+packaging/dist/
+dist/
+target/debian/
+target/generate-rpm/

@@ -1,0 +1,12 @@
+[package]
+name = "sonus-cache"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "LRU file cache for audio data in Sonus"
+
+[dependencies]
+sonus-core.workspace = true
+dirs.workspace = true
+thiserror.workspace = true
