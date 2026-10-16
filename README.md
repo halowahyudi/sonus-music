@@ -18,10 +18,18 @@ yt-dlp, with a retro pixel-art desktop GUI. No ads, no accounts, no cost.
 
 ## Requirements
 
-Sonus shells out to two external tools. Both must be on `PATH`:
+Sonus streams audio through two external tools: **yt-dlp** (resolves and
+fetches the stream) and **ffmpeg** (decodes to raw PCM).
 
-- **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** — resolves and streams audio
-- **[ffmpeg](https://ffmpeg.org/)** — decodes to raw PCM
+They're found in this order:
+
+1. `SONUS_YTDLP_PATH` / `SONUS_FFMPEG_PATH` env overrides
+2. A copy Sonus downloaded itself (`sonus deps install`)
+3. Anything already on `PATH`
+
+On first launch the GUI offers to download and install both tools into your
+user data dir — no admin rights, no package manager needed. You can also
+install them yourself:
 
 ```bash
 # Arch
@@ -41,8 +49,16 @@ winget install yt-dlp.yt-dlp
 winget install Gyan.FFmpeg
 ```
 
-Run `sonus paths` to check both are found. Custom locations can be set with
-`SONUS_YTDLP_PATH` and `SONUS_FFMPEG_PATH`.
+If a system copy is already installed, Sonus prefers it. To manage its own
+downloaded copies instead:
+
+```bash
+sonus deps status     # where each tool lives, and whether it's up to date
+sonus deps install    # download anything missing
+sonus deps update     # force re-download of the latest versions
+```
+
+Run `sonus paths` to see all the directories Sonus uses.
 
 ## Build
 
@@ -59,6 +75,9 @@ sonus search "query"     # Search from the terminal and print results
 sonus radio <video-id>   # Print YouTube's recommendations for a track
 sonus themes             # List available themes
 sonus paths              # Show data/cache/theme directories, check dependencies
+sonus deps status        # Where yt-dlp/ffmpeg live, and whether updates exist
+sonus deps install       # Download any missing tools
+sonus deps update        # Force re-download of the latest tools
 ```
 
 ### Keyboard shortcuts
@@ -136,12 +155,19 @@ filename rather than silently ignored.
 ```
 crates/
   sonus-core/     Shared types: Track, Queue, Playlist, Theme
+  sonus-deps/     Downloads/verifies/updates the yt-dlp & ffmpeg binaries
   sonus-ytdlp/    yt-dlp subprocess: search, radio, metadata, streaming
   sonus-audio/    Playback engine (rodio), ring buffer, EQ, spectrum
   sonus-library/  SQLite library: tracks, playlists, history, favourites
   sonus-cache/    LRU file cache for audio data
   sonus-gui/      GUI: pixel-art widgets, views, theme manager
   sonus/          Binary entry point and CLI
+
+packaging/
+  assets/         Icons + .desktop (single source for window, installers)
+  windows/        Inno Setup script + portable build
+  macos/          .app bundle Info.plist
+  aur/            AUR PKGBUILD
 ```
 
 ### How playback works

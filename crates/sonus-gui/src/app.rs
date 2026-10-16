@@ -364,10 +364,13 @@ impl SonusApp {
     /// The download is blocking I/O, so it runs on a plain thread and reports
     /// progress through a shared mutex that `poll_setup` reads each frame.
     pub fn start_dependency_setup(&mut self) {
-        let deps: Vec<sonus_deps::Dependency> = [sonus_deps::Dependency::YtDlp, sonus_deps::Dependency::Ffmpeg]
-            .into_iter()
-            .filter(|dep| sonus_deps::needs_install(*dep))
-            .collect();
+        let deps: Vec<sonus_deps::Dependency> = [
+            sonus_deps::Dependency::YtDlp,
+            sonus_deps::Dependency::Ffmpeg,
+        ]
+        .into_iter()
+        .filter(|dep| sonus_deps::needs_install(*dep))
+        .collect();
         if deps.is_empty() {
             // Nothing missing — clear the problems and carry on.
             self.dependency_problems.clear();
@@ -407,7 +410,8 @@ impl SonusApp {
                         Ok(outcome) => {
                             e.done = true;
                             e.progress = 1.0;
-                            e.label = format!("{} installed (v{})", entry.dep.name(), outcome.version);
+                            e.label =
+                                format!("{} installed (v{})", entry.dep.name(), outcome.version);
                         }
                         Err(err) => {
                             e.error = Some(err.to_string());
@@ -450,7 +454,10 @@ impl SonusApp {
             let handle = self.tokio.clone();
             self.stale_pending = Pending::start(&handle, async move {
                 let mut messages = Vec::new();
-                for dep in [sonus_deps::Dependency::YtDlp, sonus_deps::Dependency::Ffmpeg] {
+                for dep in [
+                    sonus_deps::Dependency::YtDlp,
+                    sonus_deps::Dependency::Ffmpeg,
+                ] {
                     if let sonus_deps::StaleStatus::Stale { current, latest } =
                         sonus_deps::check_stale(dep)
                     {
@@ -1397,7 +1404,10 @@ mod tests {
             });
         }
 
-        assert!(setup.entries().is_empty(), "shared state not visible until poll");
+        assert!(
+            setup.entries().is_empty(),
+            "shared state not visible until poll"
+        );
         setup.poll();
         let entries = setup.entries();
         assert_eq!(entries.len(), 1);

@@ -108,7 +108,10 @@ mod tests {
         // eugeneware/ffmpeg-static tags its releases `b6.1.1`.
         assert_eq!(Version::parse("b6.1.1").unwrap().to_string(), "6.1.1");
         assert_eq!(Version::parse("v7.0.2").unwrap().to_string(), "7.0.2");
-        assert_eq!(Version::parse("release-2026.08.19").unwrap().to_string(), "2026.8.19");
+        assert_eq!(
+            Version::parse("release-2026.08.19").unwrap().to_string(),
+            "2026.8.19"
+        );
     }
 
     #[test]
@@ -133,7 +136,9 @@ mod tests {
         let mut m = Manifest::default();
         m.tools.insert(
             "yt-dlp".into(),
-            InstalledEntry { version: Version::parse("2026.8.19").unwrap() },
+            InstalledEntry {
+                version: Version::parse("2026.8.19").unwrap(),
+            },
         );
         save_manifest(&dir, &m);
 

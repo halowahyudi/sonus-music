@@ -8,10 +8,10 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
+use crate::bin_dir;
 use crate::install::{resolve, Dependency};
 use crate::manifest::{load_manifest, Version};
-use crate::resolve::{latest_version, ResolvedBinary, ResolutionError};
-use crate::bin_dir;
+use crate::resolve::{latest_version, ResolutionError, ResolvedBinary};
 
 /// How long between staleness checks. yt-dlp releases every few days, so daily
 /// is plenty.

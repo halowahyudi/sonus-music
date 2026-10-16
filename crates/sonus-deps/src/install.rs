@@ -68,7 +68,11 @@ pub enum InstallError {
     Network { tool: &'static str, detail: String },
 
     #[error("digest mismatch for {tool}: expected {expected}, got {actual}")]
-    DigestMismatch { tool: &'static str, expected: String, actual: String },
+    DigestMismatch {
+        tool: &'static str,
+        expected: String,
+        actual: String,
+    },
 
     #[error("io error installing {tool}: {detail}")]
     Io { tool: &'static str, detail: String },
@@ -124,19 +128,30 @@ where
 }
 
 /// Shared body of `install` and `update`: fetch, verify, place, record.
-fn download_and_record<F>(dep: Dependency, on_progress: &mut F) -> Result<InstallOutcome, InstallError>
+fn download_and_record<F>(
+    dep: Dependency,
+    on_progress: &mut F,
+) -> Result<InstallOutcome, InstallError>
 where
     F: FnMut(f32),
 {
     let bin = bin_dir();
-    std::fs::create_dir_all(&bin).map_err(|e| InstallError::Io { tool: dep.name(), detail: e.to_string() })?;
+    std::fs::create_dir_all(&bin).map_err(|e| InstallError::Io {
+        tool: dep.name(),
+        detail: e.to_string(),
+    })?;
 
     let release = release_for(dep.name())?;
     let outcome = download_and_install(&bin, dep, &release, on_progress)?;
 
     // Record what we installed so staleness checks don't redownload blindly.
     let mut manifest: Manifest = load_manifest(&bin);
-    manifest.tools.insert(dep.name().to_string(), InstalledEntry { version: outcome.version });
+    manifest.tools.insert(
+        dep.name().to_string(),
+        InstalledEntry {
+            version: outcome.version,
+        },
+    );
     save_manifest(&bin, &manifest);
 
     Ok(outcome)
@@ -166,14 +181,26 @@ where
 
     if let Some(extract_to) = &release.artifact.extract_to {
         let out = bin.join(extract_to);
-        gunzip(&tmp, &out).map_err(|e| InstallError::Io { tool: dep.name(), detail: e.to_string() })?;
+        gunzip(&tmp, &out).map_err(|e| InstallError::Io {
+            tool: dep.name(),
+            detail: e.to_string(),
+        })?;
         let _ = std::fs::remove_file(&tmp);
-        std::fs::rename(&out, &target).map_err(|e| InstallError::Io { tool: dep.name(), detail: e.to_string() })?;
+        std::fs::rename(&out, &target).map_err(|e| InstallError::Io {
+            tool: dep.name(),
+            detail: e.to_string(),
+        })?;
     } else {
-        std::fs::rename(&tmp, &target).map_err(|e| InstallError::Io { tool: dep.name(), detail: e.to_string() })?;
+        std::fs::rename(&tmp, &target).map_err(|e| InstallError::Io {
+            tool: dep.name(),
+            detail: e.to_string(),
+        })?;
     }
 
-    ensure_executable(&target).map_err(|e| InstallError::Io { tool: dep.name(), detail: e.to_string() })?;
+    ensure_executable(&target).map_err(|e| InstallError::Io {
+        tool: dep.name(),
+        detail: e.to_string(),
+    })?;
 
     Ok(InstallOutcome {
         dependency: dep,
@@ -195,26 +222,34 @@ where
     let response = ureq::get(&release.artifact.url)
         .set("User-Agent", "sonus-music")
         .call()
-        .map_err(|e| InstallError::Network { tool, detail: e.to_string() })?;
+        .map_err(|e| InstallError::Network {
+            tool,
+            detail: e.to_string(),
+        })?;
 
     // Content-Length isn't always present on these CDN redirects, so fall
     // back to the size from the release metadata.
     let total = release.artifact.size.max(1);
-    let mut file = std::fs::File::create(dest)
-        .map_err(|e| InstallError::Io { tool, detail: e.to_string() })?;
+    let mut file = std::fs::File::create(dest).map_err(|e| InstallError::Io {
+        tool,
+        detail: e.to_string(),
+    })?;
     let mut reader = response.into_reader();
     let mut buf = [0u8; 64 * 1024];
     let mut written = 0u64;
 
     loop {
-        let n = reader
-            .read(&mut buf)
-            .map_err(|e| InstallError::Io { tool, detail: e.to_string() })?;
+        let n = reader.read(&mut buf).map_err(|e| InstallError::Io {
+            tool,
+            detail: e.to_string(),
+        })?;
         if n == 0 {
             break;
         }
-        file.write_all(&buf[..n])
-            .map_err(|e| InstallError::Io { tool, detail: e.to_string() })?;
+        file.write_all(&buf[..n]).map_err(|e| InstallError::Io {
+            tool,
+            detail: e.to_string(),
+        })?;
         written += n as u64;
         on_progress((written as f32 / total as f32).min(1.0));
     }
@@ -227,13 +262,16 @@ fn verify_sha256(path: &Path, expected: &str, dep: Dependency) -> Result<(), Ins
     use sha2::{Digest, Sha256};
 
     let mut hasher = Sha256::new();
-    let mut file = std::fs::File::open(path)
-        .map_err(|e| InstallError::Io { tool: dep.name(), detail: e.to_string() })?;
+    let mut file = std::fs::File::open(path).map_err(|e| InstallError::Io {
+        tool: dep.name(),
+        detail: e.to_string(),
+    })?;
     let mut buf = [0u8; 64 * 1024];
     loop {
-        let n = file
-            .read(&mut buf)
-            .map_err(|e| InstallError::Io { tool: dep.name(), detail: e.to_string() })?;
+        let n = file.read(&mut buf).map_err(|e| InstallError::Io {
+            tool: dep.name(),
+            detail: e.to_string(),
+        })?;
         if n == 0 {
             break;
         }
@@ -296,12 +334,21 @@ mod tests {
         std::fs::write(&f, b"hello").unwrap();
 
         // Wrong digest must fail.
-        let err = verify_sha256(&f, "0000000000000000000000000000000000000000000000000000000000000000", Dependency::YtDlp);
+        let err = verify_sha256(
+            &f,
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            Dependency::YtDlp,
+        );
         assert!(matches!(err, Err(InstallError::DigestMismatch { .. })));
 
         // Right digest must pass.
         // sha256("hello") = 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
-        verify_sha256(&f, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824", Dependency::YtDlp).unwrap();
+        verify_sha256(
+            &f,
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+            Dependency::YtDlp,
+        )
+        .unwrap();
 
         let _ = std::fs::remove_dir_all(&dir);
     }

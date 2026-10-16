@@ -8,11 +8,14 @@
 
 use std::path::{Path, PathBuf};
 
-pub use install::{install, install_if_missing, managed_path, needs_install, update, Dependency, InstallError, InstallOutcome};
+pub use install::{
+    install, install_if_missing, managed_path, needs_install, update, Dependency, InstallError,
+    InstallOutcome,
+};
 pub use manifest::{load_manifest, save_manifest, Manifest, Version};
 pub use release::{Artifact, Release};
 pub use resolve::{
-    latest_version, release_for, resolve_ffmpeg, resolve_ytdlp, ResolvedBinary, ResolutionError,
+    latest_version, release_for, resolve_ffmpeg, resolve_ytdlp, ResolutionError, ResolvedBinary,
 };
 pub use stale::{check_stale, update_available, StaleStatus};
 

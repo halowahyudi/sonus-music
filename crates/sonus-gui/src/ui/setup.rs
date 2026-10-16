@@ -24,7 +24,11 @@ pub fn render(app: &mut SonusApp, ctx: &egui::Context, palette: &Palette) {
         egui::Order::Foreground,
         egui::Id::new("setup_dimmer"),
     ));
-    paint::fill(&dimmer, ctx.screen_rect(), palette.dim(palette.panel_dark, 0.4));
+    paint::fill(
+        &dimmer,
+        ctx.screen_rect(),
+        palette.dim(palette.panel_dark, 0.4),
+    );
 
     // The panel itself lives in an Area so we get a real Ui to lay buttons
     // into, while still drawing the chrome by hand.
@@ -36,13 +40,8 @@ pub fn render(app: &mut SonusApp, ctx: &egui::Context, palette: &Palette) {
             ui.set_max_size(rect.size());
 
             let painter = ui.painter();
-            let content = paint::titled_panel(
-                painter,
-                rect,
-                "SETUP",
-                palette,
-                body(font_size::HEADER),
-            );
+            let content =
+                paint::titled_panel(painter, rect, "SETUP", palette, body(font_size::HEADER));
             let inner = Rect::from_min_max(
                 Pos2::new(content.left() + 8.0, content.top() + 6.0),
                 Pos2::new(content.right() - 8.0, content.bottom() - 8.0),
@@ -104,13 +103,18 @@ pub fn render(app: &mut SonusApp, ctx: &egui::Context, palette: &Palette) {
                     y += 14.0;
 
                     if !entry.done && entry.error.is_none() {
-                        let bar_rect =
-                            Rect::from_min_max(Pos2::new(inner.left(), y), Pos2::new(inner.right(), y + 6.0));
+                        let bar_rect = Rect::from_min_max(
+                            Pos2::new(inner.left(), y),
+                            Pos2::new(inner.right(), y + 6.0),
+                        );
                         paint::outline(painter, bar_rect, palette.border);
                         let filled = bar_rect.width() * entry.progress.clamp(0.0, 1.0);
                         paint::fill(
                             painter,
-                            Rect::from_min_max(bar_rect.min, Pos2::new(bar_rect.left() + filled, bar_rect.bottom())),
+                            Rect::from_min_max(
+                                bar_rect.min,
+                                Pos2::new(bar_rect.left() + filled, bar_rect.bottom()),
+                            ),
                             palette.primary,
                         );
                         y += 10.0;
@@ -126,7 +130,8 @@ pub fn render(app: &mut SonusApp, ctx: &egui::Context, palette: &Palette) {
             let left = inner.left() + (inner.width() - total) / 2.0;
             let btn_top = inner.bottom() - btn_h;
 
-            let install_rect = Rect::from_min_size(Pos2::new(left, btn_top), Vec2::new(btn_w, btn_h));
+            let install_rect =
+                Rect::from_min_size(Pos2::new(left, btn_top), Vec2::new(btn_w, btn_h));
             let quit_rect = Rect::from_min_size(
                 Pos2::new(left + btn_w + gap, btn_top),
                 Vec2::new(btn_w, btn_h),

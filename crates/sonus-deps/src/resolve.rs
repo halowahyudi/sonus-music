@@ -27,7 +27,11 @@ pub enum ResolutionError {
     Json(#[from] serde_json::Error),
 
     #[error("no {tool} download available for this platform (os={os}, arch={arch})")]
-    UnsupportedPlatform { tool: String, os: String, arch: String },
+    UnsupportedPlatform {
+        tool: String,
+        os: String,
+        arch: String,
+    },
 }
 
 /// How Sonus finds an installed binary, in priority order:
@@ -152,7 +156,10 @@ fn ffmpeg_asset(release_json: &serde_json::Value) -> Result<&str, ResolutionErro
     pick_asset(release_json, &candidates, "ffmpeg")
 }
 
-fn asset_node<'a>(release_json: &'a serde_json::Value, name: &str) -> Option<&'a serde_json::Value> {
+fn asset_node<'a>(
+    release_json: &'a serde_json::Value,
+    name: &str,
+) -> Option<&'a serde_json::Value> {
     release_json
         .get("assets")?
         .as_array()?
@@ -226,7 +233,11 @@ pub fn release_for(tool: &str) -> Result<Release, ResolutionError> {
         .get("tag_name")
         .and_then(|t| t.as_str())
         .unwrap_or("0.0.0");
-    let version = Version::parse(tag).unwrap_or(Version { major: 0, minor: 0, patch: 0 });
+    let version = Version::parse(tag).unwrap_or(Version {
+        major: 0,
+        minor: 0,
+        patch: 0,
+    });
 
     let (asset_name, extract_to) = match tool {
         "yt-dlp" => (ytdlp_asset(&release_json)?, None),
@@ -248,7 +259,8 @@ pub fn release_for(tool: &str) -> Result<Release, ResolutionError> {
     };
 
     let temp_download = bin_dir().join(format!(".{tool}.download"));
-    let temp_extracted = (artifact.extract_to.is_some()).then(|| bin_dir().join(format!(".{tool}.extracted")));
+    let temp_extracted =
+        (artifact.extract_to.is_some()).then(|| bin_dir().join(format!(".{tool}.extracted")));
 
     Ok(Release {
         tool: tool.to_string(),
@@ -287,7 +299,10 @@ mod tests {
     #[test]
     fn env_override_reads_value() {
         std::env::set_var("SONUS_YTDLP_PATH", "/opt/bin/yt-dlp");
-        assert_eq!(env_override("SONUS_YTDLP_PATH").unwrap(), PathBuf::from("/opt/bin/yt-dlp"));
+        assert_eq!(
+            env_override("SONUS_YTDLP_PATH").unwrap(),
+            PathBuf::from("/opt/bin/yt-dlp")
+        );
         std::env::remove_var("SONUS_YTDLP_PATH");
     }
 
@@ -310,7 +325,10 @@ mod tests {
             ("ffmpeg-darwin-x64.gz", "cc", 1),
         ]);
         let asset = ffmpeg_asset(&json).unwrap();
-        assert!(asset.starts_with("ffmpeg-"), "asset {asset} must be an ffmpeg asset");
+        assert!(
+            asset.starts_with("ffmpeg-"),
+            "asset {asset} must be an ffmpeg asset"
+        );
     }
 
     #[test]

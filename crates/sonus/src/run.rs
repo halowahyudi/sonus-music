@@ -226,7 +226,12 @@ fn describe(dep: sonus_deps::Dependency) -> String {
     } {
         ResolvedBinary::Found(path) => format!("{}    {} (system)", dep.name(), path.display()),
         ResolvedBinary::Managed(path, version) => {
-            format!("{}    {} (bundled v{})", dep.name(), path.display(), version)
+            format!(
+                "{}    {} (bundled v{})",
+                dep.name(),
+                path.display(),
+                version
+            )
         }
         ResolvedBinary::Missing => format!("{}    MISSING", dep.name()),
     }

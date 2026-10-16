@@ -28,3 +28,16 @@ pub fn window_icon() -> Option<std::sync::Arc<egui::IconData>> {
         height,
     }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn window_icon_decodes_to_a_square_rgba() {
+        let icon = window_icon().expect("embedded icon must decode");
+        assert_eq!(icon.width, 64);
+        assert_eq!(icon.height, 64);
+        assert_eq!(icon.rgba.len(), 64 * 64 * 4);
+    }
+}
