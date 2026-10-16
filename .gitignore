@@ -4,6 +4,9 @@ target/
 # opencode local config (agents, commands, skills — not for the repo)
 .opencode/
 
+# Local agent/dev instructions — private, not for the repo
+AGENTS.md
+
 # IDE / editor
 .idea/
 .vscode/
